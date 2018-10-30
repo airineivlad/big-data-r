@@ -1,14 +1,145 @@
 ---
-title: "big-data-r-lab5"
+title: "Lab 5 Resampling Methods"
 author: "Vlad Airinei"
 date: "30 October 2018"
 output: html_document
 ---
 
 
-Problem Statement
+#Problem Statement
 Estimate the test MSE (mean squared error) by using
 (I) Validation set approach
 (II) LOOCV
 (III) K-fold CV
 Report which approach is the best.
+
+#Dataset
+Use Auto dataset in the package of ISLR. Focus on the following pair of variables: mpg and horsepower.
+```{r}
+library(ISLR)
+head(Auto)
+```
+
+
+
+#Questions
+##(I) Validation set approach
+
+###1) Randomly pick half of the data as the training data. Remember to set a seed to make your result repeatable
+```{r}
+half= length(Auto$m)/2
+
+set.seed(1)
+train <- sample(length(Auto$mpg),half)
+```
+
+####2) Build a linear regression model based the training data.
+```{r}
+lm.fit.train <- lm(mpg~horsepower,Auto,subset=train)
+summary(lm.fit.train)
+```
+
+####3) Estimate the test MSE based on the other half (as test data)
+```{r}
+MSE <- mean((Auto$mpg - predict(lm.fit.train,Auto))[-train]^2)
+MSE
+```
+
+
+####4) Now try to build polynomial regression of degree 2 and 3 using lm(y~poly(x,i)), where y is the response variable, x is the predictor variable and i is the highest degree of x. Compute the test MSE for the two models.
+```{r}
+lm.fit.train2 <- lm(mpg~poly(horsepower,2),Auto,subset=train)
+err.MSE2 <- mean((Auto$mpg - predict(lm.fit.train2,Auto))[-train]^2)
+
+
+lm.fit.train3 <- lm(mpg~poly(horsepower,3),Auto,subset=train)
+err.MSE3 <- mean ((Auto$mpg - predict(lm.fit.train3,Auto))[-train]^2)
+
+err.MSE2
+err.MSE3
+```
+
+
+#### 5) What conclusion could we draw from the above comparison of degree 1 (linear) and degree 2 (quadratic) and degree 3 (cubic) regression models?
+
+Degree 1 : 21.76211
+Degree 2 : 16.36646
+Degree 3 : 16.46181
+
+From degree 1 to degree 2 there is a lot of improvement, this means that the data shape is not liniar, more curve.
+From degree 2 to degree 3 there is not much improvement, would keep the degree 2 for less complexity.
+
+
+####6) Choose 10 different seeds. For each seed, calculate the test MSE for models of degree from 1 to 10. You may use a nested for-loop to do that. Plot the variability on the results. Can you obtain a similar plot as in Figure 1.
+```{r}
+errorMatrix <- matrix(nrow=10, ncol=10)
+plot(0,xlab="Degrees of Polynomial",ylab="Mean Squared Error",main="10 times random split",ylim =c(14,27),xlim=c(1,10),type="l")
+
+for(i in 1:10){
+  set.seed(i)
+  train <- sample(length(Auto$mpg),half)
+  
+  for(degree in 1:10){
+    res <- lm(mpg~poly(horsepower,degree),Auto,subset = train)
+    errorMatrix[i,degree] <-  mean ((Auto$mpg - predict(res,Auto))[-train]^2)
+  }
+  
+  lines(errorMatrix[i,],col=i)
+  
+}
+
+```
+
+####7) Experiment on the LOOCV for increasingly complex polynomial fits. More specifically, write a for-loop to increase the degree i, as in lm(y~poly(x,i)), from 1 to 10 and record the LOOCV estimate for the test error for each degree.
+
+```{r}
+library(boot)
+errs <- rep(0,10)
+
+for(i in 1:10){
+  glm.fit <- glm(mpg~poly(horsepower,i),data=Auto)
+  cv.err <- cv.glm(Auto,glm.fit)
+  errs[i] <- cv.err$delta
+  
+}
+
+
+
+
+```
+
+
+####8) Plot the result from 7) where x-axis is the degree i and y-axis is the LOOCV estimate for the test error. Can you plot a similar one as in Figure 2?
+
+```{r}
+plot(errs, col="red",pch=16, type="b", xlab="Degrees of Polynomial", ylab="Mean Squared Error",main="10 times random split")
+```
+
+####9) Set a seed. Write a for-loop to increase the degree i, as in lm(y~poly(x,i)), from 1 to 10 and record the 10-fold CV estimate for the test error for each degree.
+
+####10) Plot the result from 9) where x-axis is the degree i and y-axis is the 10-fold CV estimate for the test error.
+
+####11) Set 9 different seeds and repeat 9) and 10). Plot all the results into one plot like the one in Figure 3.
+```{r}
+errorMatrix <- matrix(nrow=10, ncol=10)
+
+plot(0,xlab="Degrees of Polynomial",ylab="Mean Squared Error",main="10-fold CV for 10 degrees",ylim =c(14,27),xlim=c(1,10),type="l")
+
+for(i in 1:10){
+  set.seed(i)
+  train <- sample(length(Auto$mpg),half)
+  
+  for(degree in 1:10){
+      res <- glm(mpg~poly(horsepower,i),data=Auto)
+      cv.err <- cv.glm(Auto,res, K=10)
+      errorMatrix[i,degree] <- cv.err$delta[2]
+  }
+  
+  lines(errorMatrix[i,],col=i)
+  
+}
+```
+
+
+
+
