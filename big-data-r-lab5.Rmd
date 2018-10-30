@@ -1,0 +1,14 @@
+---
+title: "big-data-r-lab5"
+author: "Vlad Airinei"
+date: "30 October 2018"
+output: html_document
+---
+
+
+Problem Statement
+Estimate the test MSE (mean squared error) by using
+(I) Validation set approach
+(II) LOOCV
+(III) K-fold CV
+Report which approach is the best.
